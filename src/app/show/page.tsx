@@ -47,13 +47,12 @@ function ShowContent() {
   const [error, setError] = useState<string | null>(null);
   
   const [data, setData] = useState<{ msg: string; img: string | null }>({ msg: "", img: null });
-  const [fireworkCount, setFireworkCount] = useState(40);
+  const [fireworkCount, setFireworkCount] = useState(15);
 
   const fireworksRef = useRef<Firework[]>([]);
-  const colorsRef = useRef<string[]>(defaultColors);
+  const colorsRef = useRef<string[]>([...defaultColors]);
   const isRunningRef = useRef(true);
   const animationIdRef = useRef<number>(0);
-  const initializedRef = useRef(false);
 
   // Fetch data from API
   useEffect(() => {
@@ -147,6 +146,18 @@ function ShowContent() {
   }, [showMessage]);
 
   useEffect(() => {
+    if (!loading && imageData) {
+      extractColorsFromImage(imageData).then(colors => {
+        colorsRef.current = colors;
+      }).catch(() => {
+        colorsRef.current = [...defaultColors];
+      });
+    } else if (!loading) {
+      colorsRef.current = [...defaultColors];
+    }
+  }, [loading, imageData]);
+
+  useEffect(() => {
     if (loading) return;
     
     const canvas = canvasRef.current;
@@ -156,12 +167,8 @@ function ShowContent() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    // Only initialize once
-    if (!initializedRef.current) {
-      canvas.width = window.innerWidth || 800;
-      canvas.height = window.innerHeight || 600;
-      initializedRef.current = true;
-    }
+    canvas.width = window.innerWidth || 800;
+    canvas.height = window.innerHeight || 600;
 
     const maxFireworks = fireworkCount;
     const launchProbability = 0.4;
@@ -169,26 +176,13 @@ function ShowContent() {
 
     let resizeTimeout: NodeJS.Timeout | null = null;
     
-    const resize = () => {
+    const handleResize = () => {
       if (resizeTimeout) clearTimeout(resizeTimeout);
       resizeTimeout = setTimeout(() => {
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
       }, 100);
     };
-
-    const init = async () => {
-      resize();
-      window.addEventListener("resize", handleResize);
-      
-      if (imageData) {
-        colorsRef.current = await extractColorsFromImage(imageData);
-      }
-      
-      update();
-    };
-
-    init();
 
     const createFirework = (): Firework => {
       const colorArray = colorsRef.current;
@@ -417,12 +411,8 @@ function ShowContent() {
     };
 
     isRunningRef.current = true;
-    update();
-
-    const handleResize = () => {
-      resize();
-    };
     window.addEventListener("resize", handleResize);
+    update();
 
     return () => {
       isRunningRef.current = false;
@@ -430,6 +420,7 @@ function ShowContent() {
         cancelAnimationFrame(animationIdRef.current);
       }
       window.removeEventListener("resize", handleResize);
+      if (resizeTimeout) clearTimeout(resizeTimeout);
     };
   }, [loading, fireworkCount, imageData]);
 

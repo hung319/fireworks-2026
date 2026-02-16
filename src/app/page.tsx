@@ -9,7 +9,7 @@ export default function Home() {
   const [image, setImage] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [fireworkCount, setFireworkCount] = useState(40);
+  const [fireworkCount, setFireworkCount] = useState(15);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
