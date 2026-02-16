@@ -1,9 +1,42 @@
 import { PrismaClient } from "@prisma/client";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
 
-// Set default DATABASE_URL to local SQLite if not provided
-if (!process.env.DATABASE_URL) {
-  process.env.DATABASE_URL = "file:./prisma/dev.db";
+function getDatabaseUrl() {
+  if (process.env.DATABASE_URL) {
+    return process.env.DATABASE_URL;
+  }
+  
+  if (process.env.VERCEL) {
+    const tmpDir = "/tmp";
+    const tmpDbPath = path.join(tmpDir, "dev.db");
+    
+    const possiblePaths = [
+      path.join(process.cwd(), "prisma", "dev.db"),
+      path.join(__dirname || "", "..", "prisma", "dev.db"),
+      path.join(process.env.LAMBDA_TASK_ROOT || "", "prisma", "dev.db"),
+    ];
+    
+    let srcDbPath = "";
+    for (const p of possiblePaths) {
+      if (fs.existsSync(p)) {
+        srcDbPath = p;
+        break;
+      }
+    }
+    
+    if (!fs.existsSync(tmpDbPath) && srcDbPath && fs.existsSync(srcDbPath)) {
+      fs.copyFileSync(srcDbPath, tmpDbPath);
+    }
+    
+    return `file:${tmpDbPath}`;
+  }
+  
+  return "file:./prisma/dev.db";
 }
+
+process.env.DATABASE_URL = getDatabaseUrl();
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
