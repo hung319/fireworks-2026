@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "export DATABASE_URL=sqlite:./prisma/dev.db && prisma generate && prisma migrate deploy && next build",
+    "build": "export DATABASE_URL=file:./prisma/dev.db && prisma generate && prisma migrate deploy && next build",
     "start": "next start",
     "lint": "eslint"
   },
