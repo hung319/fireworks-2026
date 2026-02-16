@@ -8,6 +8,7 @@ export default function Home() {
   const [message, setMessage] = useState("");
   const [image, setImage] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
@@ -29,8 +30,8 @@ export default function Home() {
     const reader = new FileReader();
     reader.onload = (e) => {
       const result = e.target?.result as string;
-      // Compress image to reduce size - smaller for URL
-      compressImage(result, 300, 300).then(compressed => {
+      // Compress image
+      compressImage(result, 400, 400).then(compressed => {
         setImage(compressed);
       });
     };
@@ -61,8 +62,7 @@ export default function Home() {
         canvas.height = height;
         const ctx = canvas.getContext("2d");
         ctx?.drawImage(img, 0, 0, width, height);
-        // Lower quality for smaller URL
-        resolve(canvas.toDataURL("image/jpeg", 0.5));
+        resolve(canvas.toDataURL("image/jpeg", 0.6));
       };
       img.src = dataUrl;
     });
@@ -94,32 +94,33 @@ export default function Home() {
     }
   };
 
-  const encodeData = (msg: string, img: string | null): string => {
+  const handleStart = async () => {
+    setIsLoading(true);
     try {
-      const json = JSON.stringify({ m: msg, i: img });
-      // Simple compression using btoa
-      return btoa(encodeURIComponent(json));
-    } catch {
-      return "";
-    }
-  };
+      // Save to API
+      const response = await fetch("/api/firework", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          message: message.trim(),
+          image: image,
+        }),
+      });
 
-  const tryNavigate = (url: string) => {
-    // Check if URL is too long, fallback to localStorage
-    if (url.length > 8000) {
-      // Use localStorage fallback
-      const data = { msg: message.trim(), img: image };
-      localStorage.setItem("fireworkData", JSON.stringify(data));
-      router.push("/show");
-    } else {
-      router.push(url);
-    }
-  };
+      if (!response.ok) {
+        throw new Error("Failed to save");
+      }
 
-  const handleStart = () => {
-    const encoded = encodeData(message.trim(), image);
-    const url = `/show?d=${encoded}`;
-    tryNavigate(url);
+      const data = await response.json();
+      router.push(`/show?id=${data.id}`);
+    } catch (error) {
+      console.error("Error:", error);
+      alert("Có lỗi xảy ra. Vui lòng thử lại!");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -183,8 +184,16 @@ export default function Home() {
             )}
           </div>
 
-          <button className={styles.startBtn} onClick={handleStart}>
-            <span>✨ Bắt đầu</span>
+          <button 
+            className={styles.startBtn} 
+            onClick={handleStart}
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <span>⏳ Đang tạo...</span>
+            ) : (
+              <span>✨ Bắt đầu</span>
+            )}
           </button>
         </div>
 

@@ -1,0 +1,18 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Firework {
+  id        String   @id @default(uuid())
+  message   String?
+  image     String?
+  createdAt DateTime @default(now())
+  expiresAt DateTime?
+
+  @@index([id])
+}

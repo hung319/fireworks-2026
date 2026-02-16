@@ -25,13 +25,6 @@ interface Firework {
   particles: Particle[];
 }
 
-interface FireworkData {
-  m?: string;
-  i?: string | null;
-  msg?: string;
-  img?: string | null;
-}
-
 const defaultColors = [
   "#ff2d75", "#ffd700", "#00f5ff", "#ff6b35", 
   "#a855f7", "#22c55e", "#f43f5e", "#3b82f6",
@@ -47,39 +40,38 @@ function ShowContent() {
   const [showMessage, setShowMessage] = useState(false);
   const [copied, setCopied] = useState(false);
   const [showControls, setShowControls] = useState(true);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   
   const [data, setData] = useState<{ msg: string; img: string | null }>({ msg: "", img: null });
 
+  // Fetch data from API
   useEffect(() => {
-    // Try URL params first (for sharing)
-    const encoded = searchParams.get("d");
-    if (encoded) {
-      try {
-        const json = decodeURIComponent(atob(encoded));
-        const parsed = JSON.parse(json) as FireworkData;
-        setData({
-          msg: parsed.m || "",
-          img: parsed.i || null
-        });
-        return;
-      } catch (e) {
-        console.error("Failed to parse URL data");
+    const fetchData = async () => {
+      const id = searchParams.get("id");
+      
+      if (id) {
+        try {
+          const response = await fetch(`/api/firework/${id}`);
+          if (!response.ok) {
+            const err = await response.json();
+            setError(err.error || "Không tìm thấy");
+            setLoading(false);
+            return;
+          }
+          const result = await response.json();
+          setData({
+            msg: result.message || "",
+            img: result.image || null
+          });
+        } catch (e) {
+          setError("Có lỗi xảy ra");
+        }
       }
-    }
-    
-    // Fallback to localStorage (for direct access)
-    const stored = localStorage.getItem("fireworkData");
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored) as FireworkData;
-        setData({
-          msg: parsed.msg || parsed.m || "",
-          img: parsed.img || parsed.i || null
-        });
-      } catch (e) {
-        console.error("Failed to parse stored data");
-      }
-    }
+      setLoading(false);
+    };
+
+    fetchData();
   }, [searchParams]);
 
   const { msg, img: imageData } = data;
@@ -252,11 +244,9 @@ function ShowContent() {
     };
 
     const update = () => {
-      // Simple clear for better performance
       ctx.fillStyle = "#000";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      // Launch new fireworks
       if (fireworks.length < maxFireworks && Math.random() < launchProbability) {
         fireworks.push(createFirework(colors.length > 0 ? colors : undefined));
       }
@@ -265,11 +255,9 @@ function ShowContent() {
         const fw = fireworks[i];
 
         if (!fw.exploded) {
-          // Draw rocket with trail
           const trailLength = 25;
           const alpha = Math.min(1, (fw.y - fw.targetY) / 200);
           
-          // Dashed trail
           if (fw.y > fw.targetY + 30) {
             drawDashedLine(
               ctx, 
@@ -279,13 +267,11 @@ function ShowContent() {
             );
           }
           
-          // Rocket dot
           ctx.beginPath();
           ctx.arc(fw.x, fw.y, 2, 0, Math.PI * 2);
           ctx.fillStyle = fw.color;
           ctx.fill();
 
-          // Physics
           fw.x += fw.vx;
           fw.vy += 0.1;
           fw.y += fw.vy;
@@ -301,7 +287,6 @@ function ShowContent() {
             const prevX = p.x;
             const prevY = p.y;
             
-            // Update physics
             p.x += p.vx;
             p.y += p.vy;
             p.vy += 0.04;
@@ -309,12 +294,10 @@ function ShowContent() {
             p.vy *= 0.98;
             p.life -= 0.012;
 
-            // Draw dashed trail
             if (p.life > 0.3) {
               drawDashedLine(ctx, prevX, prevY, p.x, p.y, p.color, p.size * 0.6, p.life);
             }
 
-            // Draw particle
             ctx.beginPath();
             ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
             ctx.fillStyle = p.color;
@@ -434,6 +417,58 @@ function ShowContent() {
   const toggleControls = () => {
     setShowControls(!showControls);
   };
+
+  if (loading) {
+    return (
+      <main className={styles.main}>
+        <div style={{ 
+          color: "#fff", 
+          fontSize: "1.5rem",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          height: "100vh",
+          gap: "16px"
+        }}>
+          <span>⏳ Đang tải...</span>
+        </div>
+      </main>
+    );
+  }
+
+  if (error) {
+    return (
+      <main className={styles.main}>
+        <div style={{ 
+          color: "#ff6b6b", 
+          fontSize: "1.5rem",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          height: "100vh",
+          gap: "16px"
+        }}>
+          <span>😢 {error}</span>
+          <button 
+            onClick={handleBack}
+            style={{
+              padding: "12px 24px",
+              fontSize: "1rem",
+              background: "rgba(255,255,255,0.1)",
+              border: "1px solid rgba(255,255,255,0.2)",
+              borderRadius: "50px",
+              color: "#fff",
+              cursor: "pointer"
+            }}
+          >
+            ← Quay về
+          </button>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className={styles.main} ref={containerRef} onClick={toggleControls}>
