@@ -177,7 +177,7 @@ export default function Home() {
             ) : (
               <div className={styles.preview}>
                 <img src={image} alt="Preview" className={styles.previewImage} />
-                <button className={styles.removeBtn} onClick={removeImage}>
+                <button type="button" className={styles.removeBtn} onClick={removeImage}>
                   ✕
                 </button>
               </div>

@@ -180,9 +180,9 @@ function ShowContent() {
     // 1) Randomize the number of fireworks between 30 and 50 for a richer display
     const randInt = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min;
     const hasContent = msg || imageData;
-    const maxFireworks = randInt(30, 50);
-    // Slightly lower probability to spawn new rockets to avoid excessive CPU use
-    const launchProbability = 0.08;
+    const maxFireworks = 40;
+    // Launch probability - always maintain fireworks on screen
+    const launchProbability = 0.12;
 
     const resize = () => {
       canvas.width = window.innerWidth;

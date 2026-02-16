@@ -40,11 +40,13 @@
   font-size: clamp(2rem, 8vw, 4.5rem);
   font-weight: 700;
   color: var(--text-primary);
+  background: transparent;
+  -webkit-background-clip: text;
+  background-clip: text;
   text-shadow: 
     0 0 20px rgba(255, 45, 117, 0.8),
     0 0 40px rgba(255, 215, 0, 0.6),
-    0 0 60px rgba(255, 107, 53, 0.4),
-    0 4px 30px rgba(0, 0, 0, 0.5);
+    0 0 60px rgba(255, 107, 53, 0.4);
   animation: pulse 2.5s ease-in-out infinite;
   white-space: nowrap;
   max-width: 90vw;
