@@ -1,11 +1,7 @@
--- CreateTable
-CREATE TABLE "Firework" (
-    "id" TEXT NOT NULL PRIMARY KEY,
-    "message" TEXT,
-    "image" TEXT,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "expiresAt" DATETIME
+CREATE TABLE IF NOT EXISTS "Firework" (
+  "id" TEXT PRIMARY KEY NOT NULL,
+  "message" TEXT,
+  "image" TEXT,
+  "createdAt" TEXT NOT NULL DEFAULT (datetime('now')),
+  "expiresAt" TEXT
 );
-
--- CreateIndex
-CREATE INDEX "Firework_id_idx" ON "Firework"("id");

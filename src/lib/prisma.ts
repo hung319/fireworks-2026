@@ -59,7 +59,16 @@ async function ensureDbSchema() {
   }
 }
 
-// Kick off on module load to ensure schema is ready for first requests
+// Kick off startup migrations to ensure schema exists
 ensureDbSchema().catch(() => {
   // Ignore errors here; actual requests will surface issues if any
 });
+
+// Also try a hard startup migrate unconditionally to reduce first-request failures
+try {
+  const { execSync } = require("child_process");
+  const dbUrl = process.env.DATABASE_URL || "file:./prisma/dev.db";
+  execSync(`npx prisma migrate deploy`, { stdio: "inherit", env: { ...process.env, DATABASE_URL: dbUrl } });
+} catch (e) {
+  console.error("[prisma] Startup migrate deploy failed (post-initialization):", e);
+}
