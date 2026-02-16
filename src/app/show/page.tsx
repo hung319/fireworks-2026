@@ -92,12 +92,10 @@ function ShowContent() {
   }, [searchParams]);
 
   const { msg, img: imageData } = data;
-  const hasContent = msg;
 
   const extractColorsFromImage = (imgSrc: string): Promise<string[]> => {
     return new Promise((resolve) => {
       const img = new Image();
-      img.crossOrigin = "anonymous";
       img.onload = () => {
         const canvas = document.createElement("canvas");
         const ctx = canvas.getContext("2d");
@@ -132,7 +130,7 @@ function ShowContent() {
   };
 
   useEffect(() => {
-    const delay = hasContent ? 3500 : 500;
+    const delay = msg ? 3500 : 500;
     const timer = setTimeout(() => {
       setShowMessage(true);
     }, delay);
@@ -169,22 +167,28 @@ function ShowContent() {
     const launchProbability = 0.4;
     const fireworkTypes: ('peony' | 'willow' | 'chrysanthemum')[] = ['peony', 'willow', 'chrysanthemum'];
 
+    let resizeTimeout: NodeJS.Timeout | null = null;
+    
     const resize = () => {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
+      if (resizeTimeout) clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(() => {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+      }, 100);
     };
 
-    // Extract colors from image if available
-    const initColors = async () => {
+    const init = async () => {
+      resize();
+      window.addEventListener("resize", handleResize);
+      
       if (imageData) {
         colorsRef.current = await extractColorsFromImage(imageData);
-      } else {
-        colorsRef.current = defaultColors;
       }
+      
+      update();
     };
-    
-    // Initialize colors
-    initColors();
+
+    init();
 
     const createFirework = (): Firework => {
       const colorArray = colorsRef.current;
@@ -403,11 +407,9 @@ function ShowContent() {
       }
     };
 
-    // Start animation loop
     isRunningRef.current = true;
     update();
 
-    // Handle resize
     const handleResize = () => {
       resize();
     };
@@ -564,9 +566,6 @@ function ShowContent() {
       <div className={`${styles.actions} ${showControls ? styles.visible : styles.hidden}`}>
         <button className={styles.backBtn} onClick={handleBack}>
           ← Quay về
-        </button>
-        <button className={styles.saveBtn} onClick={handleSaveScreenshot}>
-          📷 Lưu ảnh
         </button>
         <button className={styles.shareBtn} onClick={handleShare}>
           {copied ? "✓ Đã copy!" : " Chia sẻ"}
