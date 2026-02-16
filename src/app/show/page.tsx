@@ -46,57 +46,13 @@ function ShowContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
-  const [data, setData] = useState<{ msg: string; img: string | null }>({ msg: "", img: null });
+  const [data, setData] = useState<{ msg: string }>({ msg: "" });
   const [fireworkCount, setFireworkCount] = useState(15);
 
   const fireworksRef = useRef<Firework[]>([]);
   const colorsRef = useRef<string[]>([...defaultColors]);
   const isRunningRef = useRef(true);
   const animationIdRef = useRef<number>(0);
-  const imageShownRef = useRef(false);
-  const imagePixelsRef = useRef<{x: number, y: number, color: string}[]>([]);
-  const formingImageRef = useRef(false);
-  const particlesImageRef = useRef<{x: number, y: number, tx: number, ty: number, color: string, life: number}[]>([]);
-
-  const extractImagePixels = async (imgSrc: string, w: number, h: number): Promise<{x: number, y: number, color: string}[]> => {
-    return new Promise((resolve) => {
-      const img = new Image();
-      img.onload = () => {
-        const tempCanvas = document.createElement("canvas");
-        const scale = Math.min(w * 0.6 / img.width, h * 0.5 / img.height);
-        const imgW = img.width * scale;
-        const imgH = img.height * scale;
-        tempCanvas.width = imgW;
-        tempCanvas.height = imgH;
-        const tempCtx = tempCanvas.getContext("2d");
-        if (!tempCtx) {
-          resolve([]);
-          return;
-        }
-        tempCtx.drawImage(img, 0, 0, imgW, imgH);
-        const imgData = tempCtx.getImageData(0, 0, imgW, imgH);
-        const pixels: {x: number, y: number, color: string}[] = [];
-        const offsetX = (w - imgW) / 2;
-        const offsetY = (h - imgH) / 2;
-        for (let y = 0; y < imgH; y += 3) {
-          for (let x = 0; x < imgW; x += 3) {
-            const idx = (y * imgW + x) * 4;
-            const r = imgData.data[idx];
-            const g = imgData.data[idx + 1];
-            const b = imgData.data[idx + 2];
-            const a = imgData.data[idx + 3];
-            if (a > 128) {
-              const color = `rgb(${r},${g},${b})`;
-              pixels.push({ x: offsetX + x, y: offsetY + y, color });
-            }
-          }
-        }
-        resolve(pixels);
-      };
-      img.onerror = () => resolve([]);
-      img.src = imgSrc;
-    });
-  };
 
   // Fetch data from API
   useEffect(() => {
@@ -121,8 +77,7 @@ function ShowContent() {
           }
           const result = await response.json();
           setData({
-            msg: result.message || "",
-            img: result.image || null
+            msg: result.message || ""
           });
         } catch (e) {
           setError("Có lỗi xảy ra");
@@ -134,43 +89,7 @@ function ShowContent() {
     fetchData();
   }, [searchParams]);
 
-  const { msg, img: imageData } = data;
-
-  const extractColorsFromImage = (imgSrc: string): Promise<string[]> => {
-    return new Promise((resolve) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement("canvas");
-        const ctx = canvas.getContext("2d");
-        if (!ctx) {
-          resolve(defaultColors);
-          return;
-        }
-        canvas.width = 30;
-        canvas.height = 30;
-        ctx.drawImage(img, 0, 0, 30, 30);
-        const imgData = ctx.getImageData(0, 0, 30, 30);
-        const pixels = imgData.data;
-        const colorCounts: { [key: string]: number } = {};
-        for (let i = 0; i < pixels.length; i += 12) {
-          const r = Math.round(pixels[i] / 32) * 32;
-          const g = Math.round(pixels[i + 1] / 32) * 32;
-          const b = Math.round(pixels[i + 2] / 32) * 32;
-          if (pixels[i + 3] > 128) {
-            const hex = `#${r.toString(16).padStart(2, "0")}${g.toString(16).padStart(2, "0")}${b.toString(16).padStart(2, "0")}`;
-            colorCounts[hex] = (colorCounts[hex] || 0) + 1;
-          }
-        }
-        const sortedColors = Object.entries(colorCounts)
-          .sort((a, b) => b[1] - a[1])
-          .slice(0, 8)
-          .map(([color]) => color);
-        resolve(sortedColors.length > 0 ? sortedColors : defaultColors);
-      };
-      img.onerror = () => resolve(defaultColors);
-      img.src = imgSrc;
-    });
-  };
+  const { msg } = data;
 
   useEffect(() => {
     const delay = msg ? 3500 : 500;
@@ -188,19 +107,6 @@ function ShowContent() {
       return () => clearTimeout(timer);
     }
   }, [showMessage]);
-
-  useEffect(() => {
-    if (!loading && imageData) {
-      extractColorsFromImage(imageData).then(colors => {
-        colorsRef.current = colors;
-      }).catch(() => {
-        colorsRef.current = [...defaultColors];
-      });
-      imageShownRef.current = false;
-    } else if (!loading) {
-      colorsRef.current = [...defaultColors];
-    }
-  }, [loading, imageData]);
 
   useEffect(() => {
     if (loading) return;
@@ -450,46 +356,6 @@ function ShowContent() {
         }
       }
 
-      if (imageData && fireworksRef.current.length === 0 && maxFireworks > 0 && !formingImageRef.current) {
-        formingImageRef.current = true;
-        extractImagePixels(imageData, canvas.width, canvas.height).then(pixels => {
-          imagePixelsRef.current = pixels;
-          particlesImageRef.current = pixels.map(p => ({
-            x: Math.random() * canvas.width,
-            y: Math.random() * canvas.height,
-            tx: p.x,
-            ty: p.y,
-            color: p.color,
-            life: 1
-          }));
-        });
-      }
-
-      if (particlesImageRef.current.length > 0) {
-        const particles = particlesImageRef.current;
-        for (let i = particles.length - 1; i >= 0; i--) {
-          const p = particles[i];
-          const dx = p.tx - p.x;
-          const dy = p.ty - p.y;
-          p.x += dx * 0.03;
-          p.y += dy * 0.03;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-          if (dist < 2) {
-            ctx.beginPath();
-            ctx.arc(p.x, p.y, 2, 0, Math.PI * 2);
-            ctx.fillStyle = p.color;
-            ctx.fill();
-          } else {
-            ctx.beginPath();
-            ctx.moveTo(p.x, p.y);
-            ctx.lineTo(p.x - dx * 0.1, p.y - dy * 0.1);
-            ctx.strokeStyle = p.color;
-            ctx.lineWidth = 1;
-            ctx.stroke();
-          }
-        }
-      }
-
       if (isRunningRef.current) {
         animationIdRef.current = requestAnimationFrame(update);
       }
@@ -507,7 +373,7 @@ function ShowContent() {
       window.removeEventListener("resize", handleResize);
       if (resizeTimeout) clearTimeout(resizeTimeout);
     };
-  }, [loading, fireworkCount, imageData]);
+  }, [loading, fireworkCount]);
 
   const handleShare = async () => {
     const url = window.location.href;
