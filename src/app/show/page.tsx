@@ -159,7 +159,7 @@ function ShowContent() {
     let isRunning = true;
 
     const maxFireworks = fireworkCount;
-    const launchProbability = 0.15;
+    const launchProbability = 0.3;
 
     const resize = () => {
       canvas.width = window.innerWidth;
@@ -183,7 +183,7 @@ function ShowContent() {
 
     const explode = (firework: Firework, customColors?: string[]) => {
       const colorArray = customColors || colors;
-      const count = hasContent ? 40 : 30;
+      const count = 40;
       
       for (let i = 0; i < count; i++) {
         const angle = (Math.PI * 2 * i) / count + Math.random() * 0.1;
